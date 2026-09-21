@@ -17,8 +17,9 @@ def simulate_ideal(circuit, shots=1024, seed=7):
     """
     Inspects the pure state and samples the circuit using StatevectorSampler.
     """
+    non_measured_qc = circuit.remove_final_measurements(inplace=False)
     # 1. Inspect the pure state before measurement.
-    state = Statevector.from_instruction(circuit)
+    state = Statevector.from_instruction(non_measured_qc)
 
     # 2. Sample a measured copy; keep the original unitary circuit intact.
     measured = circuit.copy()
