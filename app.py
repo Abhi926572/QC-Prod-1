@@ -2,6 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
 from qiskit import QuantumCircuit
+from qiskit import transpile
 from qiskit.quantum_info import Statevector
 from qiskit.primitives import StatevectorSampler
 from qiskit_aer import AerSimulator
@@ -14,30 +15,21 @@ st.set_page_config(page_title="Quantum Circuit Designer", layout="wide")
 
 # ==================== HELPERS & SIMULATIONS ====================
 def simulate_ideal(circuit, shots=1024, seed=7):
-    """
-    Inspects the pure state and samples the circuit using StatevectorSampler.
-    """
-    non_measured_qc = circuit.remove_final_measurements(inplace=False)
-    # 1. Inspect the pure state before measurement.
-    state = Statevector.from_instruction(non_measured_qc)
+    unitary_circuit = circuit.remove_final_measurements(inplace=False)
 
-    # 2. Sample a measured copy; keep the original unitary circuit intact.
-    measured = circuit.copy()
-    
-    # Only add measure_all if no classical bits or registers already exist
-    if measured.num_clbits == 0:
-        measured.measure_all()
-        
-    sampler = StatevectorSampler(seed=seed)
-    pub_result = sampler.run([measured], shots=shots).result()[0]
-    
-    # Retrieve the bitstring data safely from classical register names
-    # measure_all creates a register named 'meas'
-    if 'meas' in pub_result.data:
-        counts = pub_result.data.meas.get_counts()
-    else:
-        # Fallback for manually added registers
-        counts = pub_result.data.c.get_counts() if 'c' in pub_result.data else {}
+    # Calculate the final statevector
+    state = Statevector.from_instruction(unitary_circuit)
+
+    # Run the original circuit to obtain measurement counts
+    simulator = AerSimulator()
+    compiled_circuit = transpile(circuit, simulator)
+    result = simulator.run(
+        compiled_circuit,
+        shots=shots
+    ).result()
+
+    counts = result.get_counts()
+
         
     return state, counts
 
